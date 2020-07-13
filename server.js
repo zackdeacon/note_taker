@@ -1,45 +1,20 @@
 // Dependencies
 // =============================================================
-var express = require("express");
-var path = require("path");
+const express = require("express");
+const path = require("path");
+const DB = require("./Develop/db/db");
+
 
 // Sets up the Express App
 // =============================================================
 var app = express();
-var PORT = 3000;
+var PORT = process.env.PORT || 3000;
 
 // Sets up the Express app to handle data parsing
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+app.use(express.static('./Develop/public'));
 
-// Star Wars Characters (DATA)
-// =============================================================
-// var notesArr = [
-//   {
-//     routeName: "yoda",
-//     name: "Yoda",
-//     role: "Jedi Master",
-//     age: 900,
-//     forcePoints: 2000
-//   },
-//   {
-//     routeName: "darthmaul",
-//     name: "Darth Maul",
-//     role: "Sith Lord",
-//     age: 200,
-//     forcePoints: 1200
-//   },
-//   {
-//     routeName: "obiwankenobi",
-//     name: "Obi Wan Kenobi",
-//     role: "Jedi Master",
-//     age: 55,
-//     forcePoints: 1350
-//   }
-// ];
-
-// Routes
-// =============================================================
 
 // Basic route that sends the user first to the AJAX Page
 app.get("/", function(req, res) {
@@ -50,43 +25,39 @@ app.get("/notes", function(req, res) {
   res.sendFile(path.join(__dirname, "./Develop/public/notes.html"));
 });
 
-// // Displays all characters
-// app.get("/api/notes", function(req, res) {
-//   return res.json(notesArr);
-// });
 
-// // Displays a single character, or returns false
-// app.get("/api/characters/:character", function(req, res) {
-//   var chosen = req.params.character;
+app.get('/api/notes', async (req, res) => {
+  try {  
+    let currentNotes = await DB.readNotes()
+    console.log(currentNotes);
+    res.json(currentNotes)
+  } catch (e){
+    console.log(e);
+  }
+})
 
-//   console.log(chosen);
+// API Post
+app.post('/api/notes', async (req, res) => {
+  const notes = req.body;
+  let currentNotes = await DB.readNotes()
+  await DB.writeNotes([...currentNotes, notes]) 
+  res.json(notes)
+})
 
-//   for (var i = 0; i < characters.length; i++) {
-//     if (chosen === characters[i].routeName) {
-//       return res.json(characters[i]);
-//     }
-//   }
+// API Delete Chosen ID
+app.delete('/api/notes/:id', async (req, res) => {
+  const chosenID = req.params.id;
+  const notes = req.body;
+  console.log(chosenID);
+  let currentNotes = await DB.readNotes()
+  const remainingNotes = currentNotes.filter((notes) => {
+    return notes.id !== chosenID
+  })
+  await DB.writeNotes([...remainingNotes])
 
-//   return res.json(false);
-// });
-
-// // Create New Characters - takes in JSON input
-// app.post("/api/characters", function(req, res) {
-//   // req.body hosts is equal to the JSON post sent from the user
-//   // This works because of our body parsing middleware
-//   var newCharacter = req.body;
-
-//   // Using a RegEx Pattern to remove spaces from newCharacter
-//   // You can read more about RegEx Patterns later https://www.regexbuddy.com/regex.html
-//   newCharacter.routeName = newCharacter.name.replace(/\s+/g, "").toLowerCase();
-
-//   console.log(newCharacter);
-
-//   characters.push(newCharacter);
-
-//   res.json(newCharacter);
-// });
-
+  res.json(notes)
+  console.log("The note has been deleted");
+})
 // Starts the server to begin listening
 // =============================================================
 app.listen(PORT, function() {
